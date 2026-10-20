@@ -1,1 +1,3 @@
-API_SECRET_KEY = "x8Kd92LmPq4Zr7TnVw3Yb5Hc1Js6Ae0F"
+import os
+
+API_SECRET_KEY = os.environ.get("API_SECRET_KEY")

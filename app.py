@@ -1,5 +1,8 @@
+import os
 import sqlite3
-from flask import Flask, request
+
+from flask import Flask, render_template_string, request
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 
@@ -11,7 +14,10 @@ def init_db():
         "(id INTEGER PRIMARY KEY, username TEXT, password TEXT)"
     )
     conn.execute("DELETE FROM users")
-    conn.execute("INSERT INTO users (username, password) VALUES ('admin', 'S3cretPass!')")
+    conn.execute(
+        "INSERT INTO users (username, password) VALUES (?, ?)",
+        ("admin", generate_password_hash("S3cretPass!")),
+    )
     conn.commit()
     conn.close()
 
@@ -27,15 +33,16 @@ def login():
     password = request.args.get("password", "")
 
     conn = sqlite3.connect("users.db")
-    query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
-    user = conn.execute(query).fetchone()
+    row = conn.execute(
+        "SELECT password FROM users WHERE username = ?", (username,)
+    ).fetchone()
     conn.close()
 
-    if user:
-        return f"Welcome {username}!"
+    if row and check_password_hash(row[0], password):
+        return render_template_string("Welcome {{ username }}!", username=username)
     return "Invalid credentials", 401
 
 
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
